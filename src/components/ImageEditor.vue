@@ -8,7 +8,8 @@
       <button @click="onReverseEmboss">Reverse Emboss</button>
       <button @click="resetImage">Reset</button>
     </div>
-    <img :src="processedImageData" alt="Edited Image" v-if="processedImageData" style="max-width: 50%; margin-top: 10px;" />
+    <img :src="processedImageData" alt="Edited Image" v-if="processedImageData"
+      style="max-width: 50%; margin-top: 10px;" />
     <div ref="imageEditorDiv"></div>
   </div>
 </template>
@@ -47,9 +48,9 @@ const applyFilter = async (type) => {
   const file = imageInput.value.files[0];
   await imageEditor.value.loadImageFromFile(file, file.name);
   imageEditor.value.applyFilter(type)
-  .then(() => {
-    processedImageData.value = imageEditor.value.toDataURL({format: 'jpeg', quality: 0.95});
-  });
+    .then(() => {
+      processedImageData.value = imageEditor.value.toDataURL({ format: 'jpeg', quality: 0.95 });
+    });
   const time2 = performance.now();
   console.log(`Time taken to apply filter: ${time2 - time1}ms`);
 };
