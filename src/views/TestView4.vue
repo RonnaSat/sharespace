@@ -134,8 +134,7 @@ const startDrawing = (opt) => {
       fill: "transparent",
       stroke: currentColor.value,
       strokeWidth: 16,
-      hasControls: true,
-      hasBorders: true,
+      selectable: true,
     });
     canvas.value.add(currentShape);
   } else if (drawingMode.value === "circle") {
@@ -146,8 +145,7 @@ const startDrawing = (opt) => {
       fill: "transparent",
       stroke: currentColor.value,
       strokeWidth: 16,
-      hasControls: true,
-      hasBorders: true,
+      selectable: true,
     });
     canvas.value.add(currentShape);
   }
