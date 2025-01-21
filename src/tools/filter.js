@@ -29,6 +29,32 @@ const resizeImage = (tensor) => {
     return tf.image.resizeBilinear(tensor, [newHeight, newWidth]);
 };
 
+export const applyGrayScale = async (file, resize = false) => {
+    if (!file || !(file instanceof File)) return;
+    await setBackend();
+
+    const bitmap = await createImageBitmap(file);
+    let tensor = tf.browser.fromPixels(bitmap);
+    bitmap.close();
+
+    if (resize) {
+        const resizedTensor = resizeImage(tensor);
+        if (tensor !== resizedTensor) {
+            tensor.dispose();
+            tensor = resizedTensor;
+        }
+    }
+
+    const grayTensor = tf.tidy(() => {
+        const rgb = tensor.cast('float32').div(255);
+        const grayScale = rgb.mean(2, true);
+        return grayScale.tile([1, 1, 3]).clipByValue(0, 1);
+    });
+
+    tensor.dispose();
+    return tensorToImage(grayTensor);
+};
+
 export const applyEmboss = async (file, embossType = 'normal', resize = false) => {
     if (!file || !(file instanceof File)) return;
     const time1 = performance.now();
