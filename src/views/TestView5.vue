@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { Canvas, Rect, Circle } from "fabric";
+import * as fabric from "fabric";
 
 export default {
   data() {
@@ -34,7 +34,7 @@ export default {
   },
   methods: {
     initCanvas() {
-      this.canvas = new Canvas("canvas", {
+      this.canvas = new fabric.Canvas("canvas", {
         width: 800,
         height: 600,
         backgroundColor: "#ffffff",
@@ -48,7 +48,7 @@ export default {
       }
     },
     addRectangle() {
-      const rect = new Rect({
+      const rect = new fabric.Rect({
         left: 100,
         top: 100,
         width: 100,
@@ -59,7 +59,7 @@ export default {
       this.canvas.add(rect);
     },
     addCircle() {
-      const circle = new Circle({
+      const circle = new fabric.Circle({
         left: 100,
         top: 100,
         radius: 50,

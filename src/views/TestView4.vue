@@ -42,7 +42,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { Canvas, Rect, Circle, PencilBrush } from "fabric";
+import * as fabric from "fabric";
 import defaultImageSrc from "../assets/image_test.jpg";
 import { applyGrayScale, applyEmboss } from "../tools/filter";
 
@@ -80,7 +80,7 @@ const handleImageLoad = async () => {
     height: scaledHeight,
   };
 
-  // Update canvas with new dimensions
+  // Update canvas with new fabric.dimensions
   if (canvas.value) {
     canvas.value.setDimensions({
       width: scaledWidth,
@@ -97,7 +97,7 @@ const startPoint = ref({ x: 0, y: 0 });
 let currentShape = null;
 
 const initCanvas = () => {
-  canvas.value = new Canvas("canvas", {
+  canvas.value = new fabric.Canvas("canvas", {
     width: canvasSize.value.width,
     height: canvasSize.value.height,
     backgroundColor: "transparent",
@@ -108,7 +108,7 @@ const initCanvas = () => {
   });
 
   // Initialize the brush
-  canvas.value.freeDrawingBrush = new PencilBrush(canvas.value);
+  canvas.value.freeDrawingBrush = new fabric.PencilBrush(canvas.value);
   canvas.value.freeDrawingBrush.width = 5;
   canvas.value.freeDrawingBrush.color = currentColor.value;
 
@@ -126,7 +126,7 @@ const startDrawing = (opt) => {
   startPoint.value = pointer;
 
   if (drawingMode.value === "rectangle") {
-    currentShape = new Rect({
+    currentShape = new fabric.Rect({
       left: pointer.x,
       top: pointer.y,
       width: 0,
@@ -138,7 +138,7 @@ const startDrawing = (opt) => {
     });
     canvas.value.add(currentShape);
   } else if (drawingMode.value === "circle") {
-    currentShape = new Circle({
+    currentShape = new fabric.Circle({
       left: pointer.x,
       top: pointer.y,
       radius: 0,
@@ -279,7 +279,7 @@ const applyFilter = async (filterType) => {
     // Always use original image for filter application
     const response = await fetch(originalImageUrl.value);
     const blob = await response.blob();
-    const file = new File([blob], "image.jpg", { type: "image/jpeg" });
+    const file = new fabric.File([blob], "image.jpg", { type: "image/jpeg" });
 
     let result;
     switch (filterType) {
