@@ -34,7 +34,7 @@
           @load="handleImageLoad"
           ref="imageRef"
         />
-        <canvas id="canvas"></canvas>
+        <canvas id="editor-canvas"></canvas>
       </div>
     </div>
   </div>
@@ -48,7 +48,7 @@ import { applyGrayScale, applyEmboss } from "../tools/filter";
 
 const MAX_WIDTH = 1024; // Add this constant
 
-const canvas = ref(null);
+let canvas = null;
 const currentColor = ref("#FF0000"); // Change default color to red
 const isDrawingMode = ref(false);
 const originalImageUrl = ref(defaultImageSrc);
@@ -81,13 +81,13 @@ const handleImageLoad = async () => {
   };
 
   // Update canvas with new fabric.dimensions
-  if (canvas.value) {
-    canvas.value.setDimensions({
+  if (canvas) {
+    canvas.setDimensions({
       width: scaledWidth,
       height: scaledHeight,
     });
-    canvas.value.setZoom(scaledWidth / naturalWidth); // Scale objects proportionally
-    canvas.value.requestRenderAll();
+    canvas.setZoom(scaledWidth / naturalWidth); // Scale objects proportionally
+    canvas.requestRenderAll();
   }
 };
 
@@ -97,7 +97,7 @@ const startPoint = ref({ x: 0, y: 0 });
 let currentShape = null;
 
 const initCanvas = () => {
-  canvas.value = new fabric.Canvas("canvas", {
+  canvas = new fabric.Canvas("editor-canvas", {
     width: canvasSize.value.width,
     height: canvasSize.value.height,
     backgroundColor: "transparent",
@@ -108,20 +108,20 @@ const initCanvas = () => {
   });
 
   // Initialize the brush
-  canvas.value.freeDrawingBrush = new fabric.PencilBrush(canvas.value);
-  canvas.value.freeDrawingBrush.width = 5;
-  canvas.value.freeDrawingBrush.color = currentColor.value;
+  canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+  canvas.freeDrawingBrush.width = 5;
+  canvas.freeDrawingBrush.color = currentColor.value;
 
   // Add mouse event listeners
-  canvas.value.on("mouse:down", startDrawing);
-  canvas.value.on("mouse:move", drawing);
-  canvas.value.on("mouse:up", endDrawing);
+  canvas.on("mouse:down", startDrawing);
+  canvas.on("mouse:move", drawing);
+  canvas.on("mouse:up", endDrawing);
 };
 
 const startDrawing = (opt) => {
   if (drawingMode.value === "none") return;
 
-  const pointer = canvas.value.getPointer(opt.e);
+  const pointer = canvas.getPointer(opt.e);
   isDrawing.value = true;
   startPoint.value = pointer;
 
@@ -136,7 +136,7 @@ const startDrawing = (opt) => {
       strokeWidth: 16,
       selectable: true,
     });
-    canvas.value.add(currentShape);
+    canvas.add(currentShape);
   } else if (drawingMode.value === "circle") {
     currentShape = new fabric.Circle({
       left: pointer.x,
@@ -147,14 +147,14 @@ const startDrawing = (opt) => {
       strokeWidth: 16,
       selectable: true,
     });
-    canvas.value.add(currentShape);
+    canvas.add(currentShape);
   }
 };
 
 const drawing = (opt) => {
   if (!isDrawing.value || !currentShape) return;
 
-  const pointer = canvas.value.getPointer(opt.e);
+  const pointer = canvas.getPointer(opt.e);
 
   if (drawingMode.value === "rectangle") {
     const width = pointer.x - startPoint.value.x;
@@ -184,7 +184,7 @@ const drawing = (opt) => {
     });
   }
 
-  canvas.value.requestRenderAll();
+  canvas.requestRenderAll();
 };
 
 const endDrawing = () => {
@@ -193,36 +193,36 @@ const endDrawing = () => {
     drawingMode.value = "none";
 
     // Update button states
-    canvas.value.isDrawingMode = false;
+    canvas.isDrawingMode = false;
     isDrawingMode.value = false;
   }
 
   isDrawing.value = false;
   currentShape = null;
-  canvas.value.requestRenderAll();
+  canvas.requestRenderAll();
 };
 
 const addRectangle = () => {
   drawingMode.value = drawingMode.value === "rectangle" ? "none" : "rectangle";
-  canvas.value.isDrawingMode = false;
+  canvas.isDrawingMode = false;
   isDrawingMode.value = false;
 };
 
 const addCircle = () => {
   drawingMode.value = drawingMode.value === "circle" ? "none" : "circle";
-  canvas.value.isDrawingMode = false;
+  canvas.isDrawingMode = false;
   isDrawingMode.value = false;
 };
 
 const toggleDrawing = () => {
   drawingMode.value = "none";
   isDrawingMode.value = !isDrawingMode.value;
-  canvas.value.isDrawingMode = isDrawingMode.value;
+  canvas.isDrawingMode = isDrawingMode.value;
 
   // Ensure brush is properly configured when drawing is enabled
   if (isDrawingMode.value) {
-    canvas.value.freeDrawingBrush.color = currentColor.value;
-    canvas.value.freeDrawingBrush.width = 5;
+    canvas.freeDrawingBrush.color = currentColor.value;
+    canvas.freeDrawingBrush.width = 5;
   }
 };
 
@@ -244,7 +244,7 @@ const exportImage = () => {
   // Scale up canvas content to match original size
   const scale = naturalWidth / MAX_WIDTH;
   ctx.scale(scale, scale);
-  ctx.drawImage(canvas.value.getElement(), 0, 0);
+  ctx.drawImage(canvas.getElement(), 0, 0);
 
   // Create download link
   const link = document.createElement("a");
@@ -255,7 +255,7 @@ const exportImage = () => {
 
 const handleKeyDown = (e) => {
   if (e.key === "Delete" || e.key === "Backspace") {
-    const activeObjects = canvas.value?.getActiveObjects();
+    const activeObjects = canvas?.getActiveObjects();
     if (!activeObjects || !activeObjects.length) return;
 
     // Check if we're trying to delete background or non-deleteable elements
@@ -264,13 +264,13 @@ const handleKeyDown = (e) => {
     // If it's a group or multiple objects
     if (activeObjects.length > 0) {
       activeObjects.forEach((obj) => {
-        canvas.value.remove(obj);
+        canvas.remove(obj);
       });
     }
 
     // Clear selection and re-render
-    canvas.value.discardActiveObject();
-    canvas.value.requestRenderAll();
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
   }
 };
 
@@ -279,7 +279,7 @@ const applyFilter = async (filterType) => {
     // Always use original image for filter application
     const response = await fetch(originalImageUrl.value);
     const blob = await response.blob();
-    const file = new fabric.File([blob], "image.jpg", { type: "image/jpeg" });
+    const file = new File([blob], "image.jpg", { type: "image/jpeg" });
 
     let result;
     switch (filterType) {
@@ -323,8 +323,8 @@ onUnmounted(() => {
 });
 
 watch(currentColor, (newColor) => {
-  if (canvas.value?.freeDrawingBrush) {
-    canvas.value.freeDrawingBrush.color = newColor;
+  if (canvas?.freeDrawingBrush) {
+    canvas.freeDrawingBrush.color = newColor;
   }
 });
 </script>
