@@ -31,28 +31,41 @@ const resizeImage = (tensor) => {
 
 export const applyGrayScale = async (file, resize = false) => {
     if (!file || !(file instanceof File)) return;
-    await setBackend();
-
+    const time1 = performance.now();
     const bitmap = await createImageBitmap(file);
-    let tensor = tf.browser.fromPixels(bitmap);
+    const canvas = new OffscreenCanvas(
+        resize ? Math.min(bitmap.width, 1024) : bitmap.width,
+        resize ? Math.round((Math.min(bitmap.width, 1024) / bitmap.width) * bitmap.height) : bitmap.height
+    );
+    const ctx = canvas.getContext('2d');
+    
+    // Draw and resize image if needed
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
 
-    if (resize) {
-        const resizedTensor = resizeImage(tensor);
-        if (tensor !== resizedTensor) {
-            tensor.dispose();
-            tensor = resizedTensor;
-        }
+    // Get image data and apply grayscale
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+        data[i] = gray;     // Red
+        data[i + 1] = gray; // Green
+        data[i + 2] = gray; // Blue
+        // Alpha channel (data[i + 3]) remains unchanged
     }
-
-    const grayTensor = tf.tidy(() => {
-        const rgb = tensor.cast('float32').div(255);
-        const grayScale = rgb.mean(2, true);
-        return grayScale.tile([1, 1, 3]).clipByValue(0, 1);
+    
+    ctx.putImageData(imageData, 0, 0);
+    
+    const blob = await canvas.convertToBlob({
+        type: 'image/jpeg',
+        quality: 0.9
     });
+    
+    const time2 = performance.now();
+    console.log("Time taken:", time2 - time1);
 
-    tensor.dispose();
-    return tensorToImage(grayTensor);
+    return addObjectUrl(URL.createObjectURL(blob));
 };
 
 export const applyEmboss = async (file, embossType = 'normal', resize = false) => {
