@@ -20,7 +20,7 @@ const resizeImageCanvas = (canvas) => {
     const newHeight = Math.round(newWidth * aspectRatio);
 
     const resizedCanvas = new OffscreenCanvas(newWidth, newHeight);
-    const resizedCtx = resizedCanvas.getContext('2d');
+    const resizedCtx = resizedCanvas.getContext('2d', { willReadFrequently: true });
     resizedCtx.drawImage(canvas, 0, 0, newWidth, newHeight);
     return resizedCanvas;
 };
@@ -28,7 +28,8 @@ const resizeImageCanvas = (canvas) => {
 
 const applyEmbossFilterCanvas = (canvas, embossType, strength = 2) => { // Added strength parameter with default value 2 (increased)
     const t1 = performance.now();
-    const ctx = canvas.getContext('2d');
+    // Setting willReadFrequently to true to optimize for multiple getImageData calls
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
     const height = canvas.height;
@@ -107,7 +108,7 @@ export const applyEmboss = async (file, embossType = 'normal', resize = false, s
 
     const bitmap = await createImageBitmap(file);
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bitmap, 0, 0);
     bitmap.close();
 
@@ -135,7 +136,7 @@ export const applyGrayScale = async (file, resize = false) => {
         resize ? Math.min(bitmap.width, 1024) : bitmap.width,
         resize ? Math.round((Math.min(bitmap.width, 1024) / bitmap.width) * bitmap.height) : bitmap.height
     );
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     // Draw and resize image if needed
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
