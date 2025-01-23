@@ -18,7 +18,7 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import ImageEditor from 'tui-image-editor';
 import VConsole from 'vconsole';
-import { applyEmboss } from '@/tools/emboss.js';
+import { applyEmboss } from '@/tools/filter.js';
 import { addObjectUrl, removeObjectUrl, cleanupAllObjectUrls } from '@/tools/objectUrlStore';
 
 const imageEditorDiv = ref(null);
