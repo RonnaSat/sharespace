@@ -28,7 +28,7 @@
       </div>
       <div class="canvas-container" :style="containerStyle">
         <img
-          :src="backgroundImageUrl"
+          :src="backgroundImage"
           alt="background"
           class="background-image"
           @load="handleImageLoad"
@@ -52,7 +52,7 @@ let canvas = null;
 const currentColor = ref("#FF0000"); // Change default color to red
 const isDrawingMode = ref(false);
 const originalImageUrl = ref(defaultImageSrc);
-const backgroundImageUrl = ref(defaultImageSrc);
+const backgroundImage = ref(defaultImageSrc);
 
 const imageRef = ref(null);
 const canvasSize = ref({ width: 800, height: 600 }); // default size
@@ -294,23 +294,23 @@ const applyFilter = async (filterType) => {
         break;
       default:
         // Reset to original image if no filter selected
-        backgroundImageUrl.value = originalImageUrl.value;
+        backgroundImage.value = originalImageUrl.value;
         return;
     }
 
     if (result) {
-      backgroundImageUrl.value = result;
+      backgroundImage.value = result;
     }
   } catch (error) {
     console.error("Error applying filter:", error);
     // On error, reset to original image
-    backgroundImageUrl.value = originalImageUrl.value;
+    backgroundImage.value = originalImageUrl.value;
   }
 };
 
 // Add reset function if needed
 const resetImage = () => {
-  backgroundImageUrl.value = originalImageUrl.value;
+  backgroundImage.value = originalImageUrl.value;
 };
 
 onMounted(() => {
