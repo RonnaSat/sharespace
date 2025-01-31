@@ -23,6 +23,7 @@
         <span class="zoom-level">{{ formatZoomLevel }}%</span>
         <button @click="zoomOut">-</button>
         <button @click="resetZoom">Reset</button>
+        <button @click="exportObj">exportObj</button>
         <div class="tool-controls">
           <button :class="{ active: currentTool === 'HAND' }" @click="setTool('HAND')">
             ✋
@@ -55,6 +56,8 @@ import defaultImageSrc from "../assets/image_test.jpg";
 import { applyGrayScale, applyEmboss } from "../tools/filter";
 
 import Zoom from '@/components/TestZoom.vue'
+
+import jsontest from './test.json'
 
 const zoomRef = ref(null);
 const MAX_WIDTH = 1024;
@@ -129,6 +132,9 @@ const initCanvas = () => {
   canvas.on("mouse:down", startDrawing);
   canvas.on("mouse:move", drawing);
   canvas.on("mouse:up", endDrawing);
+  console.log(jsontest.length);
+  
+  canvas.loadFromJSON(jsontest, canvas.renderAll.bind(canvas));
 };
 
 const startDrawing = (opt) => {
@@ -340,6 +346,12 @@ const resetZoom = () => {
 const setTool = (tool) => {
   zoomRef.value.setTool(tool);
 };
+
+const exportObj = () => {
+  console.log('exportObj');
+  console.log(canvas.toJSON());
+};
+
 
 onMounted(() => {
   initCanvas();
