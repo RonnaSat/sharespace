@@ -1,19 +1,12 @@
+// imageEdit.vue
 <template>
   <div style="width: 100dvw; display: flex; justify-content: center">
     <div class="editor-container">
       <div class="toolbar">
-        <button
-          @click="addRectangle"
-          :class="{ active: drawingMode === 'rectangle' }"
-          :disabled="isDrawing"
-        >
+        <button @click="addRectangle" :class="{ active: drawingMode === 'rectangle' }" :disabled="isDrawing">
           Add Rectangle
         </button>
-        <button
-          @click="addCircle"
-          :class="{ active: drawingMode === 'circle' }"
-          :disabled="isDrawing"
-        >
+        <button @click="addCircle" :class="{ active: drawingMode === 'circle' }" :disabled="isDrawing">
           Add Circle
         </button>
         <button @click="toggleDrawing">Toggle Drawing</button>
@@ -25,17 +18,32 @@
           <button @click="applyFilter('reverseEmboss')">Reverse Emboss</button>
           <button @click="resetImage">Reset Image</button>
         </div>
+
+        <button @click="zoomIn">+</button>
+        <span class="zoom-level">{{ formatZoomLevel }}%</span>
+        <button @click="zoomOut">-</button>
+        <button @click="resetZoom">Reset</button>
+        <div class="tool-controls">
+          <button :class="{ active: currentTool === 'HAND' }" @click="setTool('HAND')">
+            ✋
+          </button>
+          <button :class="{ active: currentTool === 'NONE' }" @click="setTool('NONE')">
+            NONE
+          </button>
+
+        </div>
       </div>
-      <div class="canvas-container" :style="containerStyle">
-        <img
-          :src="backgroundImage"
-          alt="background"
-          class="background-image"
-          @load="handleImageLoad"
-          ref="imageRef"
-        />
-        <canvas id="editor-canvas"></canvas>
-      </div>
+      <Zoom :container-width="containerWidth" :container-height="containerHeight" :content-width="contentWidth"
+        :content-height="contentHeight" ref="zoomRef">
+        <template #default="{ zoomLevel, panX, panY, cursor }">
+          <div ref="canvasContainerRef" class="canvas-container"
+            :style="[{ containerStyle }, { transform: `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`, cursor: cursor }]">
+            <img :src="backgroundImage" alt="background" class="background-image" @load="handleImageLoad"
+              ref="imageRef" />
+            <canvas id="editor-canvas"></canvas>
+          </div>
+        </template>
+      </Zoom>
     </div>
   </div>
 </template>
@@ -46,18 +54,26 @@ import * as fabric from "fabric";
 import defaultImageSrc from "../assets/image_test.jpg";
 import { applyGrayScale, applyEmboss } from "../tools/filter";
 
-const MAX_WIDTH = 1024; // Add this constant
+import Zoom from '@/components/TestZoom.vue'
+
+const zoomRef = ref(null);
+const MAX_WIDTH = 1024;
 
 let canvas = null;
-const currentColor = ref("#FF0000"); // Change default color to red
+const currentColor = ref("#FF0000");
 const isDrawingMode = ref(false);
 const originalImageUrl = ref(defaultImageSrc);
 const backgroundImage = ref(defaultImageSrc);
 
 const imageRef = ref(null);
-const canvasSize = ref({ width: 800, height: 600 }); // default size
+const canvasSize = ref({ width: 800, height: 600 });
+const canvasContainerRef = ref(null); // Ref for canvas container
+const contentWidth = ref(0); // Track content width
+const contentHeight = ref(0); // Track content height
+const containerWidth = ref(0); // Track container width
+const containerHeight = ref(0); // Track container height
 
-// Add computed style for container
+
 const containerStyle = computed(() => ({
   width: `${canvasSize.value.width}px`,
   height: `${canvasSize.value.height}px`,
@@ -66,32 +82,31 @@ const containerStyle = computed(() => ({
 const handleImageLoad = async () => {
   if (!imageRef.value) return;
 
-  // Get natural image dimensions
   const { naturalWidth, naturalHeight } = imageRef.value;
 
-  // Calculate scaled dimensions
   const aspectRatio = naturalHeight / naturalWidth;
   const scaledWidth = MAX_WIDTH;
   const scaledHeight = Math.round(MAX_WIDTH * aspectRatio);
 
-  // Update canvas size with scaled dimensions
   canvasSize.value = {
     width: scaledWidth,
     height: scaledHeight,
   };
+  contentWidth.value = scaledWidth; // Set content width after image load
+  contentHeight.value = scaledHeight; // Set content height after image load
 
-  // Update canvas with new fabric.dimensions
   if (canvas) {
     canvas.setDimensions({
       width: scaledWidth,
       height: scaledHeight,
     });
-    canvas.setZoom(scaledWidth / naturalWidth); // Scale objects proportionally
+    canvas.setZoom(scaledWidth / naturalWidth);
     canvas.requestRenderAll();
   }
+  updateContainerDimensions(); // Update container dimensions after image load
 };
 
-const drawingMode = ref("none"); // Add this ref for tracking current drawing mode
+const drawingMode = ref("none");
 const isDrawing = ref(false);
 const startPoint = ref({ x: 0, y: 0 });
 let currentShape = null;
@@ -102,17 +117,15 @@ const initCanvas = () => {
     height: canvasSize.value.height,
     backgroundColor: "transparent",
     isDrawingMode: false,
-    selection: true, // Enable selection here
+    selection: true,
     preserveObjectStacking: true,
     uniformScaling: false,
   });
 
-  // Initialize the brush
   canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
   canvas.freeDrawingBrush.width = 5;
   canvas.freeDrawingBrush.color = currentColor.value;
 
-  // Add mouse event listeners
   canvas.on("mouse:down", startDrawing);
   canvas.on("mouse:move", drawing);
   canvas.on("mouse:up", endDrawing);
@@ -170,7 +183,7 @@ const drawing = (opt) => {
     const radius =
       Math.sqrt(
         Math.pow(pointer.x - startPoint.value.x, 2) +
-          Math.pow(pointer.y - startPoint.value.y, 2)
+        Math.pow(pointer.y - startPoint.value.y, 2)
       ) / 2;
     const center = {
       x: (pointer.x + startPoint.value.x) / 2,
@@ -189,10 +202,7 @@ const drawing = (opt) => {
 
 const endDrawing = () => {
   if (isDrawing.value && currentShape) {
-    // Only exit drawing mode if we actually drew something
     drawingMode.value = "none";
-
-    // Update button states
     canvas.isDrawingMode = false;
     isDrawingMode.value = false;
   }
@@ -219,7 +229,6 @@ const toggleDrawing = () => {
   isDrawingMode.value = !isDrawingMode.value;
   canvas.isDrawingMode = isDrawingMode.value;
 
-  // Ensure brush is properly configured when drawing is enabled
   if (isDrawingMode.value) {
     canvas.freeDrawingBrush.color = currentColor.value;
     canvas.freeDrawingBrush.width = 5;
@@ -229,7 +238,6 @@ const toggleDrawing = () => {
 const exportImage = () => {
   const container = document.querySelector(".canvas-container");
 
-  // Get original image dimensions
   const { naturalWidth, naturalHeight } = imageRef.value;
 
   const mergedCanvas = document.createElement("canvas");
@@ -237,16 +245,13 @@ const exportImage = () => {
   mergedCanvas.height = naturalHeight;
   const ctx = mergedCanvas.getContext("2d");
 
-  // Draw background image at original size
   const bgImage = container.querySelector(".background-image");
   ctx.drawImage(bgImage, 0, 0, naturalWidth, naturalHeight);
 
-  // Scale up canvas content to match original size
   const scale = naturalWidth / MAX_WIDTH;
   ctx.scale(scale, scale);
   ctx.drawImage(canvas.getElement(), 0, 0);
 
-  // Create download link
   const link = document.createElement("a");
   link.download = "edited-image.png";
   link.href = mergedCanvas.toDataURL("image/png");
@@ -258,17 +263,14 @@ const handleKeyDown = (e) => {
     const activeObjects = canvas?.getActiveObjects();
     if (!activeObjects || !activeObjects.length) return;
 
-    // Check if we're trying to delete background or non-deleteable elements
     if (activeObjects.some((obj) => !obj.evented)) return;
 
-    // If it's a group or multiple objects
     if (activeObjects.length > 0) {
       activeObjects.forEach((obj) => {
         canvas.remove(obj);
       });
     }
 
-    // Clear selection and re-render
     canvas.discardActiveObject();
     canvas.requestRenderAll();
   }
@@ -276,7 +278,6 @@ const handleKeyDown = (e) => {
 
 const applyFilter = async (filterType) => {
   try {
-    // Always use original image for filter application
     const response = await fetch(originalImageUrl.value);
     const blob = await response.blob();
     const file = new File([blob], "image.jpg", { type: "image/jpeg" });
@@ -293,7 +294,6 @@ const applyFilter = async (filterType) => {
         result = await applyEmboss(file, "reverse");
         break;
       default:
-        // Reset to original image if no filter selected
         backgroundImage.value = originalImageUrl.value;
         return;
     }
@@ -303,23 +303,54 @@ const applyFilter = async (filterType) => {
     }
   } catch (error) {
     console.error("Error applying filter:", error);
-    // On error, reset to original image
     backgroundImage.value = originalImageUrl.value;
   }
 };
 
-// Add reset function if needed
 const resetImage = () => {
   backgroundImage.value = originalImageUrl.value;
+};
+
+const updateContainerDimensions = () => {
+  if (canvasContainerRef.value) {
+    containerWidth.value = canvasContainerRef.value.offsetWidth;
+    containerHeight.value = canvasContainerRef.value.offsetHeight;
+  console.log('containerWidth', containerWidth.value);
+  console.log('containerHeight', containerHeight.value);
+  
+  }
+};
+
+const formatZoomLevel = computed(() => {
+  return zoomRef.value?.formatZoomLevel ?? 100;
+});
+
+const zoomIn = () => {
+  zoomRef.value.zoomIn();
+};
+
+const zoomOut = () => {
+  zoomRef.value.zoomOut();
+};
+
+const resetZoom = () => {
+  zoomRef.value.resetZoom();
+};
+
+const setTool = (tool) => {
+  zoomRef.value.setTool(tool);
 };
 
 onMounted(() => {
   initCanvas();
   window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener('resize', updateContainerDimensions);
+  updateContainerDimensions(); // Initial dimensions on mount
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener('resize', updateContainerDimensions);
 });
 
 watch(currentColor, (newColor) => {
@@ -327,6 +358,8 @@ watch(currentColor, (newColor) => {
     canvas.freeDrawingBrush.color = newColor;
   }
 });
+
+
 </script>
 
 <style scoped>
@@ -354,9 +387,11 @@ button:disabled {
 
 .canvas-container {
   position: relative;
-  margin: 0 auto;
-  max-width: 1024px; /* Add max-width constraint */
+  margin: 0;
+  max-width: 1024px;
   width: 100%;
+  overflow: hidden;
+  /* Important: to contain scaled content */
 }
 
 .background-image {
