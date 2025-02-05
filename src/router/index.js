@@ -35,7 +35,7 @@ const router = createRouter({
     {
       path: '/test5',
       name: 'test5',
-      component: () => import('../components/TestZoom.vue'),
+      component: () => import('../views/TestView5.vue'),
     }
   ],
 })
